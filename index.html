@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>カスタム気温マップ (1℃刻み色分け)</title>
+  
+  <!-- 地図ライブラリ Leaflet.js の読み込み -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #0f172a;
+      color: #f8fafc;
+    }
+
+    /* ヘッダーエリア */
+    header {
+      background-color: #1e293b;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      z-index: 1000;
+    }
+
+    h1 {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .time-info {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 気温マーカー（ピン）のデザイン */
+    .temp-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 11px;
+      padding: 2px 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.7);
+      white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      transition: transform 0.15s ease;
+    }
+    .temp-marker:hover {
+      transform: scale(1.25);
+      z-index: 9999 !important;
+    }
+
+    /* 凡例パネル */
+    .legend-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 10px 14px;
+      border-radius: 8px;
+      color: #f8fafc;
+      font-size: 11px;
+      max-width: 280px;
+    }
+    .legend-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .legend-gradient {
+      height: 10px;
+      border-radius: 5px;
+      background: linear-gradient(to right, 
+        #0d47a1, #1e88e5, #00acc1, #43a047, 
+        #fdd835, #fb8c00, #e53935, #8e24aa
+      );
+      margin-bottom: 4px;
+    }
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5e1;
+      font-size: 9px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🌡️ カスタム気温マップ</h1>
+    <div class="time-info" id="time-display">データ取得中...</div>
+  </header>
+
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // 1. 地図の初期化（URLでご提示いただいた東海・中京エリア周辺を中心座標に設定）
+    const map = L.map('map').setView([35.2411, 136.7633], 8);
+
+    // 見やすいシンプル基盤地図（OpenStreetMap）を追加
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | 気象データ: 気象庁'
+    }).addTo(map);
+
+    // 2. 1℃単位の色分けロジック (四捨五入した気温に基づいて色を決定)
+    function getTempColor(t) {
+      if (t === null || t === undefined) return '#64748b';
+      const temp = Math.round(t);
+
+      if (temp <= -10) return '#0d47a1'; // 極寒（深青）
+      if (temp <= -5)  return '#1565c0';
+      if (temp <= 0)   return '#1e88e5'; // 氷点下（青）
+      if (temp <= 5)   return '#00acc1'; // 水色
+      if (temp <= 10)  return '#00897b'; // 青緑
+      if (temp <= 15)  return '#43a047'; // 緑
+      if (temp <= 20)  return '#7cb342'; // 黄緑
+      if (temp <= 25)  return '#fdd835'; // 黄色
+      if (temp <= 28)  return '#fb8c00'; // 薄オレンジ
+      if (temp <= 30)  return '#f57c00'; // オレンジ
+      if (temp <= 33)  return '#e65100'; // 朱色
+      if (temp <= 35)  return '#e53935'; // 赤（真夏日）
+      if (temp <= 38)  return '#d81b60'; // 濃いピンク/赤（猛暑日）
+      return '#8e24aa';                 // 紫（酷暑）
+    }
+
+    // 3. 画面右下に1℃スケールの凡例を表示
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function() {
+      const div = L.DomUtil.create('div', 'legend-card');
+      div.innerHTML = `
+        <div class="legend-title">1℃刻み カラー判定スケール</div>
+        <div class="legend-gradient"></div>
+        <div class="legend-labels">
+          <span>-10℃以下</span>
+          <span>0℃</span>
+          <span>15℃</span>
+          <span>25℃</span>
+          <span>35℃以上</span>
+        </div>
+      `;
+      return div;
+    };
+    legend.addTo(map);
+
+    // 4. 気象庁APIから最新の気温データを取得して地図に描画
+    async function fetchWeatherData() {
+      try {
+        // 最新のデータ更新時刻を取得
+        const timeRes = await fetch('https://www.jma.go.jp/bosai/amedas/data/latest_time.json');
+        const latestTime = await timeRes.text();
+        
+        // 日時表示の整形
+        const formattedTime = `${latestTime.slice(0,4)}/${latestTime.slice(4,6)}/${latestTime.slice(6,8)} ${latestTime.slice(8,10)}:${latestTime.slice(10,12)}`;
+        document.getElementById('time-display').textContent = `観測時刻: ${formattedTime}`;
+
+        // 観測所リストと最新のアメダス気温データを並行取得
+        const [tableRes, dataRes] = await Promise.all([
+          fetch('https://www.jma.go.jp/bosai/amedas/const/amedastable.json'),
+          fetch(`https://www.jma.go.jp/bosai/amedas/data/map/${latestTime}.json`)
+        ]);
+
+        const amedasTable = await tableRes.json();
+        const amedasData = await dataRes.json();
+
+        // 各観測所に色付き数値バッジを配置
+        Object.keys(amedasData).forEach(id => {
+          const station = amedasTable[id];
+          const obs = amedasData[id];
+
+          if (station && obs && obs.temp) {
+            const tempVal = obs.temp[0]; // 気温（℃）
+            
+            // 気象庁座標データ（分表記）を十進数（度）に変換
+            const lat = station.lat[0] + station.lat[1] / 60;
+            const lon = station.lon[0] + station.lon[1] / 60;
+            const name = station.kjName || '観測地点';
+
+            const bgColor = getTempColor(tempVal);
+
+            // マーカー（HTML要素）を作成
+            const icon = L.divIcon({
+              className: 'custom-icon',
+              html: `<div class="temp-marker" style="background-color: ${bgColor};">${tempVal.toFixed(1)}°</div>`,
+              iconSize: [42, 20],
+              iconAnchor: [21, 10]
+            });
+
+            // 地図上に配置（クリック時に詳細を表示）
+            L.marker([lat, lon], { icon: icon })
+              .addTo(map)
+              .bindPopup(`<strong>${name}</strong><br>現在気温: <strong>${tempVal.toFixed(1)} ℃</strong>`);
+          }
+        });
+
+      } catch (err) {
+        console.error('データ取得エラー:', err);
+        document.getElementById('time-display').textContent = 'データ取得に失敗しました';
+      }
+    }
+
+    // 初回実行
+    fetchWeatherData();
+  </script>
+</body>
+</html>

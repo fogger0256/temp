@@ -1,297 +1,394 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Temp.map v1.2</title> </title>
-  
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      background-color: #0b0f19; /* 地図が透けたときのダーク背景色 */
-      color: #f8fafc;
-    }
-
-    /* ヘッダーエリア */
-    header {
-      background-color: #1e293b;
-      padding: 12px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-      z-index: 1000;
-    }
-    h1 { font-size: 1.05rem; font-weight: 600; }
-    .time-info { font-size: 0.85rem; color: #38bdf8; }
-
-    /* コントロールパネル（切り替えボタン＆スライダー） */
-    .control-panel {
-      background-color: #0f172a;
-      padding: 10px 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      align-items: center;
-      border-bottom: 1px solid #1e293b;
-      z-index: 1000;
-    }
-
-    /* 切り替え用ラジオボタンの装飾 */
-    .display-modes {
-      display: flex;
-      background: #1e293b;
-      padding: 4px;
-      border-radius: 8px;
-    }
-    .mode-btn {
-      padding: 6px 14px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.2s;
-    }
-    .mode-btn input { display: none; }
-    .mode-btn:has(input:checked) {
-      background-color: #38bdf8;
-      color: #0f172a;
-      font-weight: bold;
-    }
-
-    /* 透明度スライダーの装飾 */
-    .slider-container {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.85rem;
-      color: #94a3b8;
-    }
-    .slider-container input {
-      cursor: pointer;
-      accent-color: #38bdf8;
-    }
-
-    #map-container {
-      flex: 1;
-      width: 100%;
-      height: 100%;
-      background-color: #0b0f19; /* 地図透過時のベース色 */
-    }
-    #map { width: 100%; height: 100%; }
-
-    /* 気温マーカーのデザイン（視認性を向上） */
-    .temp-marker {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 12px;
-      color: #ffffff;
-      font-weight: bold;
-      font-size: 11px;
-      padding: 2px 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.9);
-      white-space: nowrap;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-      transition: transform 0.15s ease;
-    }
-    .temp-marker:hover {
-      transform: scale(1.35);
-      z-index: 9999 !important;
-    }
-
-    /* 凡例パネル */
-    .legend-card {
-      background: rgba(15, 23, 42, 0.9);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 10px 14px;
-      border-radius: 8px;
-      color: #f8fafc;
-      font-size: 11px;
-    }
-    .legend-title { font-weight: bold; margin-bottom: 6px; }
-    .legend-gradient {
-      height: 10px;
-      border-radius: 5px;
-      background: linear-gradient(to right, #0d47a1, #1e88e5, #00acc1, #43a047, #fdd835, #fb8c00, #e53935, #8e24aa);
-      margin-bottom: 4px;
-    }
-    .legend-labels { display: flex; justify-content: space-between; color: #cbd5e1; font-size: 9px; gap: 10px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>薄膜干渉シミュレーター（福井大）</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --text: #f8fafc;
+    --sub: #94a3b8;
+    --accent: #38bdf8;
+    --good: #4ade80;
+    --warn: #facc15;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    line-height: 1.5;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  h1 { font-size: 1.25rem; color: var(--accent); }
+  .card {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    background: #090d16;
+    border-radius: 8px;
+    display: block;
+  }
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  button {
+    background: #334155;
+    color: var(--text);
+    border: 1px solid #475569;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover, button.active {
+    background: var(--accent);
+    color: #0f172a;
+    font-weight: bold;
+    border-color: var(--accent);
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .control-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .metric-box {
+    background: #0f172a;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent);
+  }
+  .metric-label { font-size: 0.8rem; color: var(--sub); }
+  .metric-value { font-size: 1.2rem; font-weight: bold; margin-top: 4px; }
+  .bar-wrap {
+    width: 100%;
+    height: 10px;
+    background: #334155;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .bar-fill { height: 100%; transition: width 0.1s; }
+</style>
 </head>
 <body>
 
-  <header>
-    <h1>🌡️ 高視認性・カスタム気温マップ</h1>
-    <div class="time-info" id="time-display">データ取得中...</div>
-  </header>
+<div class="container">
+  <h1>薄膜の干渉シミュレーター（実験再現）</h1>
 
-  <div class="control-panel">
-    <div class="display-modes">
-      <label class="mode-btn"><input type="radio" name="mode" value="temp" checked>現在気温</label>
-      <label class="mode-btn"><input type="radio" name="mode" value="maxTemp">今日の最高気温</label>
-      <label class="mode-btn"><input type="radio" name="mode" value="minTemp">今日の最低気温</label>
+  <div class="card">
+    <div class="presets">
+      <button id="btn1" onclick="setPreset(682, 45, 'btn1')" class="active">
+        ① 初期状態 (λ=682nm, θ=45° → m=30)
+      </button>
+      <button id="btn2" onclick="setPreset(660, 45, 'btn2')">
+        ② 波長を減らす (λ=660nm, θ=45° → m=31)
+      </button>
+      <button id="btn3" onclick="setPreset(682, 60, 'btn3')">
+        ③ 角度を増やす (λ=682nm, θ=60° → m=29)
+      </button>
     </div>
 
-    <div class="slider-container">
-      <span>🗺️ 地図の濃さ:</span>
-      <input type="range" id="opacity-slider" min="0.1" max="1.0" step="0.05" value="0.5">
+    <canvas id="simCanvas" width="800" height="360"></canvas>
+  </div>
+
+  <div class="card controls">
+    <div class="control-group">
+      <div class="control-header">
+        <span>波長 $\lambda$</span>
+        <strong id="valLambda">682 nm</strong>
+      </div>
+      <input type="range" id="sliderLambda" min="450" max="720" step="1" value="682">
+    </div>
+
+    <div class="control-group">
+      <div class="control-header">
+        <span>入射角 $\theta$</span>
+        <strong id="valTheta">45.0°</strong>
+      </div>
+      <input type="range" id="sliderTheta" min="0" max="80" step="0.5" value="45">
+    </div>
+
+    <div class="control-group">
+      <div class="control-header">
+        <span>屈折率 $n$（理論値: 2.08）</span>
+        <strong id="valN">2.08</strong>
+      </div>
+      <input type="range" id="sliderN" min="1.20" max="2.50" step="0.01" value="2.08">
+    </div>
+
+    <div class="control-group">
+      <div class="control-header">
+        <span>薄膜の厚さ $d$（理論値: 5.24 μm）</span>
+        <strong id="valD">5.24 μm</strong>
+      </div>
+      <input type="range" id="sliderD" min="1.00" max="8.00" step="0.01" value="5.24">
     </div>
   </div>
 
-  <div id="map-container">
-    <div id="map"></div>
+  <div class="card metrics">
+    <div class="metric-box">
+      <div class="metric-label">光路差 $\Delta L = 2d\sqrt{n^2-\sin^2\theta}$</div>
+      <div class="metric-value" id="outDeltaL">20.46 μm</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">干渉の次数 $m = \Delta L / \lambda$</div>
+      <div class="metric-value" id="outOrder">30.00</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">透過光の強度（整数で強め合い）</div>
+      <div class="metric-value" id="outTransText">100% (強め合い)</div>
+      <div class="bar-wrap"><div id="barTrans" class="bar-fill" style="background:var(--good);width:100%"></div></div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">反射光の強度（透過光と逆位相）</div>
+      <div class="metric-value" id="outReflText">0% (弱め合い)</div>
+      <div class="bar-wrap"><div id="barRefl" class="bar-fill" style="background:var(--warn);width:0%"></div></div>
+    </div>
   </div>
+</div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    // 1. 地図の初期化
-    const map = L.map('map').setView([35.2411, 136.7633], 8);
+<script>
+  // 理論値の精密な定数（プリセット時にぴったり整数mになるよう初期設定）
+  const EXACT_N = Math.sqrt(509 / 118); // 約2.0769
+  const EXACT_D = Math.sqrt(59) * 0.682; // 約5.2385 μm
 
-    // データの視認性に最も優れた「CartoDB Positron」レイヤーを採用
-    const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 18,
-      attribution: '© OpenStreetMap, © CartoDB | 気象データ: 気象庁'
-    }).addTo(map);
+  let useExactConstants = true;
 
-    // 初期状態の地図の不透明度を設定（0.5 = 50% で少し薄く）
-    tileLayer.setOpacity(0.5);
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
 
-    // マーカーを管理するレイヤーグループ
-    const markerGroup = L.layerGroup().addTo(map);
+  const sLambda = document.getElementById('sliderLambda');
+  const sTheta = document.getElementById('sliderTheta');
+  const sN = document.getElementById('sliderN');
+  const sD = document.getElementById('sliderD');
 
-    // キャッシュ用変数
-    let amedasTableCache = null;
-    let amedasDataCache = null;
+  function wavelengthToColor(wl) {
+    let r = 0, g = 0, b = 0;
+    if (wl >= 380 && wl < 440) { r = -(wl - 440) / 60; b = 1; }
+    else if (wl >= 440 && wl < 490) { g = (wl - 440) / 50; b = 1; }
+    else if (wl >= 490 && wl < 510) { g = 1; b = -(wl - 510) / 20; }
+    else if (wl >= 510 && wl < 580) { r = (wl - 510) / 70; g = 1; }
+    else if (wl >= 580 && wl < 645) { r = 1; g = -(wl - 645) / 65; }
+    else if (wl >= 645 && wl <= 780) { r = 1; }
+    return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+  }
 
-    // 2. 1℃刻みの色分け関数
-    function getTempColor(t) {
-      if (t === null || t === undefined) return '#64748b';
-      const temp = Math.round(t);
-      if (temp <= -10) return '#0d47a1'; 
-      if (temp <= -5)  return '#1565c0';
-      if (temp <= 0)   return '#1e88e5'; 
-      if (temp <= 5)   return '#00acc1'; 
-      if (temp <= 10)  return '#00897b'; 
-      if (temp <= 15)  return '#43a047'; 
-      if (temp <= 20)  return '#7cb342'; 
-      if (temp <= 25)  return '#fdd835'; 
-      if (temp <= 28)  return '#fb8c00'; 
-      if (temp <= 30)  return '#f57c00'; 
-      if (temp <= 33)  return '#e65100'; 
-      if (temp <= 35)  return '#e53935'; 
-      if (temp <= 38)  return '#d81b60'; 
-      return '#8e24aa';                 
-    }
+  function setPreset(lambda, theta, btnId) {
+    useExactConstants = true;
+    sLambda.value = lambda;
+    sTheta.value = theta;
+    sN.value = EXACT_N.toFixed(2);
+    sD.value = EXACT_D.toFixed(2);
+    document.querySelectorAll('.presets button').forEach(b => b.classList.remove('active'));
+    document.getElementById(btnId).classList.add('active');
+    update();
+  }
 
-    // 凡例表示
-    const legend = L.control({ position: 'bottomright' });
-    legend.onAdd = function() {
-      const div = L.DomUtil.create('div', 'legend-card');
-      div.innerHTML = `
-        <div class="legend-title">1℃刻み カラー判定</div>
-        <div class="legend-gradient"></div>
-        <div class="legend-labels"><span>-10℃以下</span><span>0℃</span><span>15℃</span><span>25℃</span><span>35℃以上</span></div>
-      `;
-      return div;
-    };
-    legend.addTo(map);
+  [sLambda, sTheta].forEach(el => el.addEventListener('input', () => {
+    document.querySelectorAll('.presets button').forEach(b => b.classList.remove('active'));
+    update();
+  }));
 
-    // 3. マーカーの描画・更新処理
-    function renderMarkers() {
-      markerGroup.clearLayers();
-      if (!amedasTableCache || !amedasDataCache) return;
+  [sN, sD].forEach(el => el.addEventListener('input', () => {
+    useExactConstants = false;
+    document.querySelectorAll('.presets button').forEach(b => b.classList.remove('active'));
+    update();
+  }));
 
-      // 現在選択されているモードを取得 (temp, maxTemp, minTemp)
-      const currentMode = document.querySelector('input[name="mode"]:checked').value;
-      let labelText = '現在気温';
-      if (currentMode === 'maxTemp') labelText = '今日の最高気温';
-      if (currentMode === 'minTemp') labelText = '今日の最低気温';
+  function update() {
+    const lambdaNm = parseFloat(sLambda.value);
+    const thetaDeg = parseFloat(sTheta.value);
+    const n = useExactConstants ? EXACT_N : parseFloat(sN.value);
+    const dUm = useExactConstants ? EXACT_D : parseFloat(sD.value);
 
-      let count = 0;
-      Object.keys(amedasDataCache).forEach(id => {
-        const station = amedasTableCache[id];
-        const obs = amedasDataCache[id];
+    document.getElementById('valLambda').textContent = `${lambdaNm} nm`;
+    document.getElementById('valTheta').textContent = `${thetaDeg.toFixed(1)}°`;
+    document.getElementById('valN').textContent = n.toFixed(2);
+    document.getElementById('valD').textContent = `${dUm.toFixed(2)} μm`;
 
-        // 選択されたモードのデータが存在するかチェック
-        if (station && obs && obs[currentMode]) {
-          const tempVal = obs[currentMode][0]; // 気温値を取得
-          
-          const lat = station.lat[0] + station.lat[1] / 60;
-          const lon = station.lon[0] + station.lon[1] / 60;
-          const name = station.kjName || '観測地点';
-          const bgColor = getTempColor(tempVal);
+    const thetaRad = thetaDeg * Math.PI / 180;
+    const sinR = Math.sin(thetaRad) / n;
+    const rRad = Math.asin(sinR);
 
-          const icon = L.divIcon({
-            className: 'custom-icon',
-            html: `<div class="temp-marker" style="background-color: ${bgColor};">${tempVal.toFixed(1)}°</div>`,
-            iconSize: [42, 20],
-            iconAnchor: [21, 10]
-          });
+    // 光路差 ΔL [μm]
+    const deltaL_Um = 2 * dUm * Math.sqrt(n * n - Math.sin(thetaRad) ** 2);
+    const lambdaUm = lambdaNm / 1000;
+    const m = deltaL_Um / lambdaUm;
 
-          L.marker([lat, lon], { icon: icon })
-            .addTo(markerGroup)
-            .bindPopup(`<strong>${name}</strong><br>${labelText}: <strong>${tempVal.toFixed(1)} ℃</strong>`);
-          
-          count++;
-        }
-      });
-    }
+    // 干渉強度（2光束近似 cos^2(πm)）
+    const transIntensity = Math.cos(Math.PI * m) ** 2;
+    const reflIntensity = 1 - transIntensity;
 
-    // 4. データ取得処理
-    async function fetchWeatherData() {
-      const timeDisplay = document.getElementById('time-display');
-      try {
-        const timeRes = await fetch('https://www.jma.go.jp/bosai/amedas/data/latest_time.txt');
-        if (!timeRes.ok) throw new Error('時刻取得失敗');
-        const rawTimeText = (await timeRes.text()).trim(); 
-        const latestTime = rawTimeText.replace(/[-T:+]/g, '').slice(0, 14);
+    document.getElementById('outDeltaL').textContent = `${deltaL_Um.toFixed(3)} μm`;
+    document.getElementById('outOrder').textContent = m.toFixed(2);
 
-        const [tableRes, dataRes] = await Promise.all([
-          fetch('https://www.jma.go.jp/bosai/amedas/const/amedastable.json'),
-          fetch(`https://www.jma.go.jp/bosai/amedas/data/map/${latestTime}.json`)
-        ]);
+    const transPct = Math.round(transIntensity * 100);
+    const reflPct = Math.round(reflIntensity * 100);
 
-        amedasTableCache = await tableRes.json();
-        amedasDataCache = await dataRes.json();
+    let transState = "";
+    if (transPct >= 97) transState = " (強め合い!)";
+    else if (transPct <= 3) transState = " (弱め合い)";
 
-        // 初回描画
-        renderMarkers();
+    let reflState = "";
+    if (reflPct >= 97) reflState = " (強め合い)";
+    else if (reflPct <= 3) reflState = " (弱め合い!)";
 
-        const y = latestTime.slice(0, 4); const m = latestTime.slice(4, 6); const d = latestTime.slice(6, 8);
-        const hh = latestTime.slice(8, 10); const mm = latestTime.slice(10, 12);
-        timeDisplay.textContent = `最終更新: ${y}/${m}/${d} ${hh}:${mm}`;
+    document.getElementById('outTransText').textContent = `${transPct}%${transState}`;
+    document.getElementById('outReflText').textContent = `${reflPct}%${reflState}`;
+    document.getElementById('barTrans').style.width = `${transPct}%`;
+    document.getElementById('barRefl').style.width = `${reflPct}%`;
 
-      } catch (err) {
-        timeDisplay.textContent = `⚠️ エラー: ${err.message}`;
-        timeDisplay.style.color = '#f87171';
-      }
-    }
+    drawScene(thetaRad, rRad, lambdaNm, dUm, transIntensity, reflIntensity, m);
+  }
 
-    // 5. イベントリスナーの設定
-    // 地図の透明度スライダーが動いたとき
-    document.getElementById('opacity-slider').addEventListener('input', (e) => {
-      tileLayer.setOpacity(parseFloat(e.target.value));
-    });
+  function drawScene(theta, r, wl, dUm, transInt, reflInt, m) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const rayColor = wavelengthToColor(wl);
 
-    // 切り替えボタン（ラジオボタン）が押されたとき
-    document.querySelectorAll('input[name="mode"]').forEach(radio => {
-      radio.addEventListener('change', renderMarkers);
-    });
+    // 薄膜の描画（問題の図に合わせて下から入射、上が透過光）
+    const filmBottom = 230;
+    const filmHeight = 75 + (dUm - 5.24) * 8;
+    const filmTop = filmBottom - filmHeight;
 
-    // 初回実行
-    fetchWeatherData();
-  </script>
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.fillRect(100, filmTop, 600, filmHeight);
+    ctx.beginPath();
+    ctx.moveTo(100, filmTop); ctx.lineTo(700, filmTop);
+    ctx.moveTo(100, filmBottom); ctx.lineTo(700, filmBottom);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('薄膜 (屈折率 n)', 115, filmTop + 25);
+
+    // 入射点 P1 (下面)
+    const x1 = 280, y1 = filmBottom;
+    const dxFilm = filmHeight * Math.tan(r);
+    // 上面到達点 P2
+    const x2 = x1 + dxFilm, y2 = filmTop;
+    // 下面反射点 P3
+    const x3 = x2 + dxFilm, y3 = filmBottom;
+    // 上面再到達点 P4
+    const x4 = x3 + dxFilm, y4 = filmTop;
+
+    // 法線
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x1, filmTop - 20); ctx.lineTo(x1, filmBottom + 90);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 入射光
+    const incLen = 110;
+    const x0 = x1 - incLen * Math.sin(theta);
+    const y0 = y1 + incLen * Math.cos(theta);
+
+    drawRay(x0, y0, x1, y1, rayColor, 3.5, 1);
+
+    // 薄膜内の光路
+    drawRay(x1, y1, x2, y2, rayColor, 3, 0.9);
+    drawRay(x2, y2, x3, y3, rayColor, 2.5, 0.75);
+    drawRay(x3, y3, x4, y4, rayColor, 2.5, 0.75);
+
+    // 透過光 1 & 2 (上側)
+    const outLen = 100;
+    const tx1 = x2 + outLen * Math.sin(theta);
+    const ty1 = y2 - outLen * Math.cos(theta);
+    const tx2 = x4 + outLen * Math.sin(theta);
+    const ty2 = y4 - outLen * Math.cos(theta);
+
+    const transAlpha = 0.25 + 0.75 * transInt;
+    drawRay(x2, y2, tx1, ty1, rayColor, 3, transAlpha);
+    drawRay(x4, y4, tx2, ty2, rayColor, 3, transAlpha);
+
+    // 反射光 1 & 2 (下側)
+    const rx1 = x1 + outLen * Math.sin(theta);
+    const ry1 = y1 + outLen * Math.cos(theta);
+    const rx2 = x3 + outLen * Math.sin(theta);
+    const ry2 = y3 + outLen * Math.cos(theta);
+
+    const reflAlpha = 0.2 + 0.8 * reflInt;
+    drawRay(x1, y1, rx1, ry1, rayColor, 2.5, reflAlpha);
+    drawRay(x3, y3, rx2, ry2, rayColor, 2.5, reflAlpha);
+
+    // ラベル表示
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('入射光', x0 - 10, y0 + 20);
+    ctx.fillText(`透過光 (m=${m.toFixed(2)})`, Math.min(tx2 + 10, 620), ty2 + 15);
+    ctx.fillText('反射光', Math.min(rx2 + 10, 650), ry2 + 15);
+  }
+
+  function drawRay(x1, y1, x2, y2, color, width, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // 矢印を中間に描画
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.translate(mx, my);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(6, 0);
+    ctx.lineTo(-5, -5);
+    ctx.lineTo(-5, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  update();
+</script>
 </body>
 </html>

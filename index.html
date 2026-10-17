@@ -2,393 +2,397 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>薄膜干渉シミュレーター（福井大）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>iPad HTML Studio</title>
 <style>
   :root {
-    --bg: #0f172a;
-    --panel: #1e293b;
+    --bg-dark: #0f172a;
+    --bg-panel: #1e293b;
+    --bg-editor: #090d16;
+    --accent: #38bdf8;
+    --accent-hover: #7dd3fc;
+    --success: #4ade80;
+    --danger: #f87171;
     --text: #f8fafc;
     --sub: #94a3b8;
-    --accent: #38bdf8;
-    --good: #4ade80;
-    --warn: #facc15;
+    --border: #334155;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Meiryo", sans-serif;
-    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    background: var(--bg-dark);
     color: var(--text);
-    padding: 16px;
-    line-height: 1.5;
-  }
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    overflow: hidden;
   }
-  h1 { font-size: 1.25rem; color: var(--accent); }
-  .card {
-    background: var(--panel);
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  }
-  canvas {
-    width: 100%;
-    height: auto;
-    background: #090d16;
-    border-radius: 8px;
-    display: block;
-  }
-  .presets {
+
+  /* トップバー */
+  header {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
     display: flex;
     flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
   }
-  button {
+
+  .brand {
+    font-weight: bold;
+    font-size: 1rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  button, .file-label, select {
     background: #334155;
     color: var(--text);
     border: 1px solid #475569;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 0.85rem;
+    padding: 7px 11px;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: 0.15s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  button:hover, button.active {
-    background: var(--accent);
-    color: #0f172a;
-    font-weight: bold;
-    border-color: var(--accent);
-  }
-  .controls {
+
+  button:active, .file-label:active { transform: scale(0.97); }
+  button.primary { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+  button.success { background: var(--success); color: #0f172a; border-color: var(--success); }
+  button.danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); border-color: var(--danger); }
+  button.active-mode { background: #e2e8f0; color: #0f172a; border-color: #fff; }
+
+  input[type="file"] { display: none; }
+
+  /* メインワークスペース */
+  .workspace {
+    flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 14px;
+    grid-template-columns: 42% 58%;
+    height: calc(100dvh - 52px);
+    overflow: hidden;
   }
-  .control-group {
+
+  .workspace.mode-preview { grid-template-columns: 0% 100%; }
+  .workspace.mode-editor { grid-template-columns: 100% 0%; }
+
+  /* エディタ領域 */
+  .editor-pane {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    border-right: 2px solid var(--border);
+    background: var(--bg-editor);
+    overflow: hidden;
   }
-  .control-header {
+
+  .pane-toolbar {
+    background: #131c2e;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    color: var(--sub);
     display: flex;
     justify-content: space-between;
-    font-size: 0.9rem;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    gap: 6px;
   }
-  input[type="range"] {
+
+  textarea {
+    flex: 1;
     width: 100%;
-    accent-color: var(--accent);
-  }
-  .metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-  }
-  .metric-box {
-    background: #0f172a;
+    background: var(--bg-editor);
+    color: #e2e8f0;
+    border: none;
     padding: 12px;
-    border-radius: 8px;
-    border-left: 4px solid var(--accent);
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    -webkit-overflow-scrolling: touch;
   }
-  .metric-label { font-size: 0.8rem; color: var(--sub); }
-  .metric-value { font-size: 1.2rem; font-weight: bold; margin-top: 4px; }
-  .bar-wrap {
-    width: 100%;
-    height: 10px;
-    background: #334155;
-    border-radius: 5px;
+
+  /* プレビュー領域 */
+  .preview-pane {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
     overflow: hidden;
-    margin-top: 6px;
   }
-  .bar-fill { height: 100%; transition: width 0.1s; }
+
+  iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #ffffff;
+  }
+
+  /* レスポンシブ（縦画面時は上下分割） */
+  @media (max-width: 768px) {
+    .workspace {
+      grid-template-columns: 100%;
+      grid-template-rows: 38% 62%;
+    }
+    .workspace.mode-preview { grid-template-rows: 0% 100%; }
+    .workspace.mode-editor { grid-template-rows: 100% 0%; }
+    .editor-pane { border-right: none; border-bottom: 2px solid var(--border); }
+  }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>薄膜の干渉シミュレーター（実験再現）</h1>
+<header>
+  <div class="brand">⚡ iPad HTML Studio</div>
 
-  <div class="card">
-    <div class="presets">
-      <button id="btn1" onclick="setPreset(682, 45, 'btn1')" class="active">
-        ① 初期状態 (λ=682nm, θ=45° → m=30)
-      </button>
-      <button id="btn2" onclick="setPreset(660, 45, 'btn2')">
-        ② 波長を減らす (λ=660nm, θ=45° → m=31)
-      </button>
-      <button id="btn3" onclick="setPreset(682, 60, 'btn3')">
-        ③ 角度を増やす (λ=682nm, θ=60° → m=29)
-      </button>
-    </div>
-
-    <canvas id="simCanvas" width="800" height="360"></canvas>
+  <!-- 表示モード切替 -->
+  <div class="btn-group">
+    <button id="btnSplit" class="active-mode" onclick="setMode('split')">◫ 分割</button>
+    <button id="btnPreview" onclick="setMode('preview')">🖥️ プレビュー全画面</button>
+    <button id="btnEditor" onclick="setMode('editor')">📝 コード全画面</button>
   </div>
 
-  <div class="card controls">
-    <div class="control-group">
-      <div class="control-header">
-        <span>波長 $\lambda$</span>
-        <strong id="valLambda">682 nm</strong>
-      </div>
-      <input type="range" id="sliderLambda" min="450" max="720" step="1" value="682">
-    </div>
+  <!-- アクションボタン -->
+  <div class="btn-group">
+    <label class="file-label">
+      📂 .htmlを開く
+      <input type="file" id="fileInput" accept=".html,.htm,.txt">
+    </label>
+    <button class="primary" onclick="runCode()">▶ 実行更新</button>
+    <button class="success" onclick="openStandalone()">🖨️ 別タブ / PDF印刷</button>
+  </div>
+</header>
 
-    <div class="control-group">
-      <div class="control-header">
-        <span>入射角 $\theta$</span>
-        <strong id="valTheta">45.0°</strong>
+<div class="workspace" id="workspace">
+  <!-- 左（上）：コードエディタ -->
+  <div class="editor-pane">
+    <div class="pane-toolbar">
+      <div class="btn-group">
+        <button onclick="pasteCode()">📋 ペースト</button>
+        <button onclick="saveToLibrary()">💾 保存</button>
+        <select id="savedList" onchange="loadFromLibrary()">
+          <option value="">📚 保存済みコード...</option>
+        </select>
       </div>
-      <input type="range" id="sliderTheta" min="0" max="80" step="0.5" value="45">
-    </div>
-
-    <div class="control-group">
-      <div class="control-header">
-        <span>屈折率 $n$（理論値: 2.08）</span>
-        <strong id="valN">2.08</strong>
+      <div class="btn-group">
+        <button onclick="downloadHTML()">⬇️ .html保存</button>
+        <button class="danger" onclick="clearCode()">🗑️ クリア</button>
       </div>
-      <input type="range" id="sliderN" min="1.20" max="2.50" step="0.01" value="2.08">
     </div>
-
-    <div class="control-group">
-      <div class="control-header">
-        <span>薄膜の厚さ $d$（理論値: 5.24 μm）</span>
-        <strong id="valD">5.24 μm</strong>
-      </div>
-      <input type="range" id="sliderD" min="1.00" max="8.00" step="0.01" value="5.24">
-    </div>
+    <textarea id="codeArea" spellcheck="false" placeholder="ここにHTMLコードを貼り付けるか、上の「📂 .htmlを開く」からファイルを選択してください。"></textarea>
   </div>
 
-  <div class="card metrics">
-    <div class="metric-box">
-      <div class="metric-label">光路差 $\Delta L = 2d\sqrt{n^2-\sin^2\theta}$</div>
-      <div class="metric-value" id="outDeltaL">20.46 μm</div>
+  <!-- 右（下）：リアルタイムプレビュー -->
+  <div class="preview-pane">
+    <div class="pane-toolbar" style="background:#f1f5f9; color:#475569; border-bottom:1px solid #cbd5e1;">
+      <span>プレビュー画面（自動更新）</span>
+      <span id="statusText" style="font-weight:bold; color:#0284c7;">Ready</span>
     </div>
-    <div class="metric-box">
-      <div class="metric-label">干渉の次数 $m = \Delta L / \lambda$</div>
-      <div class="metric-value" id="outOrder">30.00</div>
-    </div>
-    <div class="metric-box">
-      <div class="metric-label">透過光の強度（整数で強め合い）</div>
-      <div class="metric-value" id="outTransText">100% (強め合い)</div>
-      <div class="bar-wrap"><div id="barTrans" class="bar-fill" style="background:var(--good);width:100%"></div></div>
-    </div>
-    <div class="metric-box">
-      <div class="metric-label">反射光の強度（透過光と逆位相）</div>
-      <div class="metric-value" id="outReflText">0% (弱め合い)</div>
-      <div class="bar-wrap"><div id="barRefl" class="bar-fill" style="background:var(--warn);width:0%"></div></div>
-    </div>
+    <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin allow-modals allow-popups"></iframe>
   </div>
 </div>
 
 <script>
-  // 理論値の精密な定数（プリセット時にぴったり整数mになるよう初期設定）
-  const EXACT_N = Math.sqrt(509 / 118); // 約2.0769
-  const EXACT_D = Math.sqrt(59) * 0.682; // 約5.2385 μm
+  const codeArea = document.getElementById('codeArea');
+  const previewFrame = document.getElementById('previewFrame');
+  const workspace = document.getElementById('workspace');
+  const fileInput = document.getElementById('fileInput');
+  const savedList = document.getElementById('savedList');
+  const statusText = document.getElementById('statusText');
 
-  let useExactConstants = true;
+  const STORAGE_KEY = 'ipad_html_studio_snippets_v1';
+  const LAST_CODE_KEY = 'ipad_html_studio_last_code';
 
-  const canvas = document.getElementById('simCanvas');
-  const ctx = canvas.getContext('2d');
+  // 初期サンプルコード
+  const DEFAULT_CODE = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: sans-serif; padding: 24px; background: #f8fafc; color: #1e293b; text-align: center; }
+  .box { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 480px; margin: 20px auto; }
+  h1 { color: #0284c7; font-size: 1.4rem; }
+  p { color: #475569; line-height: 1.6; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>🎉 iPad HTML Studio へようこそ！</h1>
+    <p>左（または上）の入力欄にHTMLコードを貼り付けると、ここにリアルタイムでプレビューが表示されます。</p>
+    <p><strong>「📂 .htmlを開く」</strong>からiPad内のHTMLファイルを読み込むこともできます。</p>
+  </div>
+</body>
+</html>`;
 
-  const sLambda = document.getElementById('sliderLambda');
-  const sTheta = document.getElementById('sliderTheta');
-  const sN = document.getElementById('sliderN');
-  const sD = document.getElementById('sliderD');
+  // 起動時の復元
+  window.addEventListener('DOMContentLoaded', () => {
+    let savedCode = null;
+    try { savedCode = localStorage.getItem(LAST_CODE_KEY); } catch(e) {}
+    codeArea.value = savedCode || DEFAULT_CODE;
+    runCode();
+    updateLibraryDropdown();
+  });
 
-  function wavelengthToColor(wl) {
-    let r = 0, g = 0, b = 0;
-    if (wl >= 380 && wl < 440) { r = -(wl - 440) / 60; b = 1; }
-    else if (wl >= 440 && wl < 490) { g = (wl - 440) / 50; b = 1; }
-    else if (wl >= 490 && wl < 510) { g = 1; b = -(wl - 510) / 20; }
-    else if (wl >= 510 && wl < 580) { r = (wl - 510) / 70; g = 1; }
-    else if (wl >= 580 && wl < 645) { r = 1; g = -(wl - 645) / 65; }
-    else if (wl >= 645 && wl <= 780) { r = 1; }
-    return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+  // コード実行
+  function runCode() {
+    const code = codeArea.value;
+    previewFrame.srcdoc = code;
+    try { localStorage.setItem(LAST_CODE_KEY, code); } catch(e) {}
+    statusText.textContent = '更新完了 (' + new Date().toLocaleTimeString() + ')';
   }
 
-  function setPreset(lambda, theta, btnId) {
-    useExactConstants = true;
-    sLambda.value = lambda;
-    sTheta.value = theta;
-    sN.value = EXACT_N.toFixed(2);
-    sD.value = EXACT_D.toFixed(2);
-    document.querySelectorAll('.presets button').forEach(b => b.classList.remove('active'));
-    document.getElementById(btnId).classList.add('active');
-    update();
+  // 入力時に自動プレビュー更新（デバウンス処理）
+  let timer = null;
+  codeArea.addEventListener('input', () => {
+    statusText.textContent = '編集中...';
+    clearTimeout(timer);
+    timer = setTimeout(runCode, 400);
+  });
+
+  // 画面モード切替
+  function setMode(mode) {
+    workspace.classList.remove('mode-preview', 'mode-editor');
+    document.getElementById('btnSplit').classList.remove('active-mode');
+    document.getElementById('btnPreview').classList.remove('active-mode');
+    document.getElementById('btnEditor').classList.remove('active-mode');
+
+    if (mode === 'preview') {
+      workspace.classList.add('mode-preview');
+      document.getElementById('btnPreview').classList.add('active-mode');
+    } else if (mode === 'editor') {
+      workspace.classList.add('mode-editor');
+      document.getElementById('btnEditor').classList.add('active-mode');
+    } else {
+      document.getElementById('btnSplit').classList.add('active-mode');
+    }
   }
 
-  [sLambda, sTheta].forEach(el => el.addEventListener('input', () => {
-    document.querySelectorAll('.presets button').forEach(b => b.classList.remove('active'));
-    update();
-  }));
-
-  [sN, sD].forEach(el => el.addEventListener('input', () => {
-    useExactConstants = false;
-    document.querySelectorAll('.presets button').forEach(b => b.classList.remove('active'));
-    update();
-  }));
-
-  function update() {
-    const lambdaNm = parseFloat(sLambda.value);
-    const thetaDeg = parseFloat(sTheta.value);
-    const n = useExactConstants ? EXACT_N : parseFloat(sN.value);
-    const dUm = useExactConstants ? EXACT_D : parseFloat(sD.value);
-
-    document.getElementById('valLambda').textContent = `${lambdaNm} nm`;
-    document.getElementById('valTheta').textContent = `${thetaDeg.toFixed(1)}°`;
-    document.getElementById('valN').textContent = n.toFixed(2);
-    document.getElementById('valD').textContent = `${dUm.toFixed(2)} μm`;
-
-    const thetaRad = thetaDeg * Math.PI / 180;
-    const sinR = Math.sin(thetaRad) / n;
-    const rRad = Math.asin(sinR);
-
-    // 光路差 ΔL [μm]
-    const deltaL_Um = 2 * dUm * Math.sqrt(n * n - Math.sin(thetaRad) ** 2);
-    const lambdaUm = lambdaNm / 1000;
-    const m = deltaL_Um / lambdaUm;
-
-    // 干渉強度（2光束近似 cos^2(πm)）
-    const transIntensity = Math.cos(Math.PI * m) ** 2;
-    const reflIntensity = 1 - transIntensity;
-
-    document.getElementById('outDeltaL').textContent = `${deltaL_Um.toFixed(3)} μm`;
-    document.getElementById('outOrder').textContent = m.toFixed(2);
-
-    const transPct = Math.round(transIntensity * 100);
-    const reflPct = Math.round(reflIntensity * 100);
-
-    let transState = "";
-    if (transPct >= 97) transState = " (強め合い!)";
-    else if (transPct <= 3) transState = " (弱め合い)";
-
-    let reflState = "";
-    if (reflPct >= 97) reflState = " (強め合い)";
-    else if (reflPct <= 3) reflState = " (弱め合い!)";
-
-    document.getElementById('outTransText').textContent = `${transPct}%${transState}`;
-    document.getElementById('outReflText').textContent = `${reflPct}%${reflState}`;
-    document.getElementById('barTrans').style.width = `${transPct}%`;
-    document.getElementById('barRefl').style.width = `${reflPct}%`;
-
-    drawScene(thetaRad, rRad, lambdaNm, dUm, transIntensity, reflIntensity, m);
+  // クリップボードからペースト
+  async function pasteCode() {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        codeArea.value = text;
+        runCode();
+      }
+    } catch (err) {
+      alert('ブラウザの制限により自動ペーストできない場合は、入力欄を長押しして「ペースト」を選択してください。');
+      codeArea.focus();
+    }
   }
 
-  function drawScene(theta, r, wl, dUm, transInt, reflInt, m) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const rayColor = wavelengthToColor(wl);
-
-    // 薄膜の描画（問題の図に合わせて下から入射、上が透過光）
-    const filmBottom = 230;
-    const filmHeight = 75 + (dUm - 5.24) * 8;
-    const filmTop = filmBottom - filmHeight;
-
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
-    ctx.fillRect(100, filmTop, 600, filmHeight);
-    ctx.beginPath();
-    ctx.moveTo(100, filmTop); ctx.lineTo(700, filmTop);
-    ctx.moveTo(100, filmBottom); ctx.lineTo(700, filmBottom);
-    ctx.stroke();
-
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '14px sans-serif';
-    ctx.fillText('薄膜 (屈折率 n)', 115, filmTop + 25);
-
-    // 入射点 P1 (下面)
-    const x1 = 280, y1 = filmBottom;
-    const dxFilm = filmHeight * Math.tan(r);
-    // 上面到達点 P2
-    const x2 = x1 + dxFilm, y2 = filmTop;
-    // 下面反射点 P3
-    const x3 = x2 + dxFilm, y3 = filmBottom;
-    // 上面再到達点 P4
-    const x4 = x3 + dxFilm, y4 = filmTop;
-
-    // 法線
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x1, filmTop - 20); ctx.lineTo(x1, filmBottom + 90);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // 入射光
-    const incLen = 110;
-    const x0 = x1 - incLen * Math.sin(theta);
-    const y0 = y1 + incLen * Math.cos(theta);
-
-    drawRay(x0, y0, x1, y1, rayColor, 3.5, 1);
-
-    // 薄膜内の光路
-    drawRay(x1, y1, x2, y2, rayColor, 3, 0.9);
-    drawRay(x2, y2, x3, y3, rayColor, 2.5, 0.75);
-    drawRay(x3, y3, x4, y4, rayColor, 2.5, 0.75);
-
-    // 透過光 1 & 2 (上側)
-    const outLen = 100;
-    const tx1 = x2 + outLen * Math.sin(theta);
-    const ty1 = y2 - outLen * Math.cos(theta);
-    const tx2 = x4 + outLen * Math.sin(theta);
-    const ty2 = y4 - outLen * Math.cos(theta);
-
-    const transAlpha = 0.25 + 0.75 * transInt;
-    drawRay(x2, y2, tx1, ty1, rayColor, 3, transAlpha);
-    drawRay(x4, y4, tx2, ty2, rayColor, 3, transAlpha);
-
-    // 反射光 1 & 2 (下側)
-    const rx1 = x1 + outLen * Math.sin(theta);
-    const ry1 = y1 + outLen * Math.cos(theta);
-    const rx2 = x3 + outLen * Math.sin(theta);
-    const ry2 = y3 + outLen * Math.cos(theta);
-
-    const reflAlpha = 0.2 + 0.8 * reflInt;
-    drawRay(x1, y1, rx1, ry1, rayColor, 2.5, reflAlpha);
-    drawRay(x3, y3, rx2, ry2, rayColor, 2.5, reflAlpha);
-
-    // ラベル表示
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('入射光', x0 - 10, y0 + 20);
-    ctx.fillText(`透過光 (m=${m.toFixed(2)})`, Math.min(tx2 + 10, 620), ty2 + 15);
-    ctx.fillText('反射光', Math.min(rx2 + 10, 650), ry2 + 15);
+  // クリア
+  function clearCode() {
+    if (confirm('入力欄のコードを消去しますか？')) {
+      codeArea.value = '';
+      runCode();
+      codeArea.focus();
+    }
   }
 
-  function drawRay(x1, y1, x2, y2, color, width, alpha) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    ctx.lineWidth = width;
+  // iPadの「ファイル」から .html を読み込む
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      codeArea.value = ev.target.result;
+      runCode();
+      setMode('preview'); // 読み込んだら見やすいようにプレビュー全画面へ
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
+  });
 
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-
-    // 矢印を中間に描画
-    const mx = (x1 + x2) / 2;
-    const my = (y1 + y2) / 2;
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    ctx.translate(mx, my);
-    ctx.rotate(angle);
-    ctx.beginPath();
-    ctx.moveTo(6, 0);
-    ctx.lineTo(-5, -5);
-    ctx.lineTo(-5, 5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+  // 別タブで開く（PDF印刷・全画面動作用）
+  function openStandalone() {
+    const w = window.open();
+    if (!w) {
+      alert('ポップアップがブロックされました。Safariの設定でポップアップを許可するか、プレビュー画面内の印刷ボタンを押してください。');
+      return;
+    }
+    w.document.open();
+    w.document.write(codeArea.value);
+    w.document.close();
   }
 
-  update();
+  // .html ファイルとしてダウンロード
+  function downloadHTML() {
+    const name = prompt('保存するファイル名を入力してください', 'index.html');
+    if (!name) return;
+    const fileName = name.endsWith('.html') ? name : name + '.html';
+    const blob = new Blob([codeArea.value], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // マイライブラリ保存機能（LocalStorage）
+  function getLibrary() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveToLibrary() {
+    const title = prompt('保存する名前を入力してください（例：福井大_薄膜シミュレーター）');
+    if (!title) return;
+    const lib = getLibrary();
+    lib[title] = codeArea.value;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lib));
+      updateLibraryDropdown();
+      savedList.value = title;
+      alert(`「${title}」を保存しました！`);
+    } catch (e) {
+      alert('保存に失敗しました（プライベートブラウズ中か容量上限の可能性があります）。');
+    }
+  }
+
+  function loadFromLibrary() {
+    const title = savedList.value;
+    if (!title) return;
+    const lib = getLibrary();
+    if (lib[title]) {
+      codeArea.value = lib[title];
+      runCode();
+    }
+  }
+
+  function updateLibraryDropdown() {
+    const lib = getLibrary();
+    savedList.innerHTML = '<option value="">📚 保存済みコード...</option>';
+    Object.keys(lib).forEach(title => {
+      const opt = document.createElement('option');
+      opt.value = title;
+      opt.textContent = title;
+      savedList.appendChild(opt);
+    });
+  }
 </script>
 </body>
 </html>
